@@ -35,6 +35,7 @@ type Word
     | Dix
     | Onze
     | Midi
+    | Heure
     | Heures
     | Minuit
     | Et
@@ -101,6 +102,9 @@ wordPosition word =
 
         Midi ->
             { first = 56, last = 59 }
+
+        Heure ->
+            { first = 60, last = 64 }
 
         Heures ->
             { first = 60, last = 65 }
@@ -221,11 +225,14 @@ computeHourWord hour words =
                 _ ->
                     Il
     in
-    if word /= Midi && word /= Minuit then
-        word :: Heures :: words
+    if word == Midi || word == Minuit then
+        word :: words
+
+    else if twelvedHour == 1 then
+        word :: Heure :: words
 
     else
-        word :: words
+        word :: Heures :: words
 
 
 computeMinuteWordsMagnetized : Int -> List Word -> List Word
