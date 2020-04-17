@@ -316,7 +316,7 @@ viewMatrix : Maybe Hour -> Html msg
 viewMatrix maybeHour =
     let
         activeWordsPositions =
-            case Debug.log "maybeHour" maybeHour of
+            case maybeHour of
                 Just hour ->
                     computeActiveWords hour.hour hour.minute
 

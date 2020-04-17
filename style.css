@@ -6,11 +6,20 @@
 }
 
 .container {
-  display: inline-flex;
+    display: inline-flex;
 }
 
-.slide {
-  float: left;
+.options {
+    margin-left: 10px;
+    float: left;
+    spacing: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.option {
+    margin-bottom: 10px;
 }
 
 .clock {

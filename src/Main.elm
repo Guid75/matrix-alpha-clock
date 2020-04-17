@@ -1,8 +1,22 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, input, label, text)
-import Html.Attributes exposing (checked, class, max, min, name, style, type_, value)
+import Html exposing (Html, button, datalist, div, input, label, option, text)
+import Html.Attributes
+    exposing
+        ( attribute
+        , checked
+        , class
+        , for
+        , id
+        , list
+        , max
+        , min
+        , name
+        , style
+        , type_
+        , value
+        )
 import Html.Events exposing (onClick, onInput)
 import Matrix
 import Task
@@ -20,13 +34,14 @@ main =
 
 type DisplayType
     = RealTime
-    | Manual String
+    | Manual
 
 
 type alias Model =
     { zone : Maybe Time.Zone
     , time : Maybe Time.Posix
     , displayType : DisplayType
+    , manualHour : ( Int, Int )
     }
 
 
@@ -35,15 +50,10 @@ init _ =
     ( { zone = Nothing
       , time = Nothing
       , displayType = RealTime
+      , manualHour = ( 10, 8 )
       }
     , Task.perform AdjustTimeZone Time.here
     )
-
-
-
--- ( Model Time.utc (Time.millisToPosix 0)
--- , Task.perform AdjustTimeZone Time.here
--- )
 
 
 type Msg
@@ -52,6 +62,23 @@ type Msg
     | RealTimeDisplayChecked
     | ManualDisplayChecked
     | ManualValueChanged String
+
+
+splitHour : String -> ( Int, Int )
+splitHour hourMinuteStr =
+    case String.split ":" hourMinuteStr of
+        [ hourStr, minuteStr ] ->
+            let
+                hour =
+                    Maybe.withDefault 0 <| String.toInt hourStr
+
+                minute =
+                    Maybe.withDefault 0 <| String.toInt minuteStr
+            in
+            ( hour, minute )
+
+        _ ->
+            ( 0, 0 )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -71,10 +98,15 @@ update msg model =
             ( { model | displayType = RealTime }, Cmd.none )
 
         ManualDisplayChecked ->
-            ( { model | displayType = Manual "0" }, Cmd.none )
+            ( { model | displayType = Manual }, Cmd.none )
 
         ManualValueChanged value ->
-            ( { model | displayType = Manual value }, Cmd.none )
+            ( { model
+                | manualHour = splitHour value
+                , displayType = Manual
+              }
+            , Cmd.none
+            )
 
 
 subscriptions : Model -> Sub Msg
@@ -106,69 +138,38 @@ radiobutton value msg sel =
         ]
 
 
-getHourAndMinute : String -> ( Int, Int )
-getHourAndMinute minutesStr =
+displayHourAndMinute : ( Int, Int ) -> String
+displayHourAndMinute ( hour, minute ) =
     let
-        minutes =
-            Maybe.withDefault 0 <| String.toInt minutesStr
+        hourStr =
+            String.fromInt hour
+                |> String.padLeft 2 '0'
 
-        hour =
-            minutes // 60
-
-        minute =
-            remainderBy 60 minutes
+        minuteStr =
+            String.fromInt minute
+                |> String.padLeft 2 '0'
     in
-    ( hour, minute )
-
-
-displayHourAndMinute : String -> String
-displayHourAndMinute minutesStr =
-    let
-        ( hour, minute ) =
-            getHourAndMinute minutesStr
-    in
-    String.fromInt hour ++ ":" ++ String.fromInt minute
-
-
-displayManualValue : DisplayType -> Html msg
-displayManualValue displayType =
-    text <|
-        case displayType of
-            RealTime ->
-                "N/A"
-
-            Manual str ->
-                displayHourAndMinute str
+    hourStr ++ ":" ++ minuteStr
 
 
 viewOptions : Model -> Html Msg
 viewOptions model =
-    let
-        rangeValue =
-            case model.displayType of
-                RealTime ->
-                    "0"
-
-                Manual str ->
-                    str
-    in
     div
-        [ class "slide" ]
-        [ div [] [ radiobutton "Display realtime hour" RealTimeDisplayChecked (model.displayType == RealTime) ]
-        , div [] [ radiobutton "Display manual hour" ManualDisplayChecked (model.displayType /= RealTime) ]
-        , div []
+        [ class "options"
+        ]
+        [ div [ class "option" ] [ radiobutton "Display realtime hour" RealTimeDisplayChecked (model.displayType == RealTime) ]
+        , div [ class "option" ] [ radiobutton "Display manual hour" ManualDisplayChecked (model.displayType /= RealTime) ]
+        , div [ class "option" ]
             [ input
-                [ type_ "range"
-                , style "width" "400px"
-                , Html.Attributes.min "0"
-                , Html.Attributes.max "1440"
-                , value rangeValue
+                [ type_ "time"
+                , value <| displayHourAndMinute model.manualHour
+                , style "margin-left" "20px"
+                , Html.Attributes.min "09:00"
+                , Html.Attributes.max "18:00"
                 , onInput ManualValueChanged
                 ]
                 []
             ]
-        , div []
-            [ displayManualValue model.displayType ]
         ]
 
 
@@ -185,10 +186,10 @@ view model =
                         _ ->
                             Nothing
 
-                Manual value ->
+                Manual ->
                     let
                         ( hour, minute ) =
-                            getHourAndMinute value
+                            model.manualHour
                     in
                     Just { hour = hour, minute = minute }
     in
